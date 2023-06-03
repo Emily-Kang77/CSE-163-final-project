@@ -7,5 +7,5 @@ Ryan, Sophie, Emily
 - libraries used: plotly, matplotlib, pandas, geopandas
 
 1. Clone this github repo
-2. Install the python packages using your preferred package manager, like py___.
+2. Install the python packages using your preferred package manager.
 3. Run the python script.
