@@ -18,7 +18,8 @@ sns.set(font_scale=2)
 
 
 def main():
-    # reads in primary data file: displaying apartment data from craigslist 2000-2018
+    # reads in primary data file: displaying apartment data
+    # from craigslist 2000-2018
     home_df = pd.read_csv('clean_2000_2018.csv', low_memory=False)
 
     # reads in new data files representing income information from 2010-2018
@@ -39,12 +40,16 @@ def main():
     all_income = make_income_datasets(path)
     race_filters = make_race_filters(all_income)
     filter_all_income(all_income, race_filters)
-    average_incomes, average_prices = make_average_prices_incomes(race_filters,
-                                      all_income, clean_home_df)
-    plot_average_incomes_prices(average_incomes, average_prices)
+    av_incomes, av_prices = make_average_prices_incomes(race_filters,
+                                                        all_income,
+                                                        clean_home_df)
+    plot_average_incomes_prices(av_incomes, av_prices)
 
     # QUESTION 3
-    pops_shapes, price_by_county = prep_q3_populations(populations_df, clean_home_df)
+    pops_shapes, price_by_county = prep_q3_populations(populations_df,
+                                                       clean_home_df,
+                                                       counties_shapes)
+    plot_populations_prices(price_by_county, pops_shapes)
 
 
 def make_clean_housing_data(home_df: pd.DataFrame) -> pd.DataFrame:
@@ -158,8 +163,9 @@ def make_income_datasets(path: str) -> pd.DataFrame:
         'Contra Costa County, Median income',
         'San Francisco County, Median income',
         'San Mateo County, Median income', 'Santa Clara County, Median income',
-        'Sonoma County, Median income', 'Year'])
-
+        'Sonoma County, Median income', 'Year'], suffixes=('', '_y'))
+    all_income.drop(all_income.filter(regex='_y$').columns, axis=1, inplace=True)
+    all_income.head(10)
 
     all_income = all_income.loc[:, all_income.columns.str.contains('Median') | 
                                     all_income.columns.str.contains('Group') | 
@@ -170,8 +176,6 @@ def make_income_datasets(path: str) -> pd.DataFrame:
     return all_income
 
 
-# SEPARATE FUNCTION HERE
-# TODO: check that return type becaues it's a series of booleans?
 def make_race_filters(all_income: pd.DataFrame) -> list[pd.Series]:
     """
     This makes filters for white, black, native american / alaskan native,
@@ -251,6 +255,10 @@ def make_average_prices_incomes(race_filters: list[pd.Series],
 # PLOT
 def plot_average_incomes_prices(average_incomes: pd.DataFrame,
                                 price_avg_2010_2018: pd.DataFrame):
+    """
+    This uses the external Plotly library, so it is not saved as a fig. The
+    plot is interactive.
+    """
     # average_incomes is already AT 2010 - 2018.
     fig = px.line(average_incomes, x="Year", y=average_incomes.columns[1:],
                 labels={
@@ -261,11 +269,10 @@ def plot_average_incomes_prices(average_incomes: pd.DataFrame,
     fig.add_scatter(x=price_avg_2010_2018.index, y=price_avg_2010_2018, name='Average Price of Housing')
     fig.show()
 
-# shp file needs all the other files in the folder
 
-# NEW FUNCTION FOR POPULATIONS
-def prep_q3_populations(populations_df: pd.DataFrame, 
-                        clean_home_df: pd.DataFrame) -> tuple[pd.DataFrame]:
+def prep_q3_populations(populations_df: pd.DataFrame,
+                        clean_home_df: pd.DataFrame,
+                        counties_shapes: pd.DataFrame) -> tuple[pd.DataFrame]:
     """
     This prepares population data to shade in the geographical plot,
     and the average housing prices by county.
@@ -283,6 +290,7 @@ def prep_q3_populations(populations_df: pd.DataFrame,
     # normalize county names in index column
     populations_df.columns = populations_df.columns.str.lstrip()
     populations_df['index'] = populations_df['index'].str.replace('County, California', '', regex=False)
+
     populations_df['index']= populations_df['index'].str.lower().str.strip()
 
     # Filters price dataframe to only use 2018 prices
@@ -342,6 +350,8 @@ def plot_populations_prices(price_by_county: pd.DataFrame,
                      edgecolor='green', linewidth=3)
     ax4.set_title('Asian Population')
     ax4.set_facecolor('lightgray')
+
+    plt.savefig('Q3_populations_prices.png')
 
 
 if __name__ == '__main__':
