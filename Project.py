@@ -19,16 +19,16 @@ sns.set(font_scale=2)
 
 def main():
     # reads in primary data file: displaying apartment data from craigslist 2000-2018
-    home_df = pd.read_csv('/data/notebook_files/clean_2000_2018.csv', low_memory=False)
+    home_df = pd.read_csv('clean_2000_2018.csv', low_memory=False)
 
     # reads in new data files representing income information from 2010-2018
-    path = '/data/notebook_files/income'
+    path = 'income'
 
     # reads in geographical data representing counties in California 
-    counties_shapes = gpd.read_file('/data/notebook_files/ca-county-boundaries/CA_Counties/CA_Counties_TIGER2016.shp')
+    counties_shapes = gpd.read_file('./CA_Counties/CA_Counties_TIGER2016.shp')
 
     # for question 3
-    populations_df = pd.read_csv('/data/notebook_files/population-decennial-2020.csv')
+    populations_df = pd.read_csv('population-decennial-2020.csv')
 
     # QUESTION 1
     clean_home_df = make_clean_housing_data(home_df)
@@ -38,15 +38,13 @@ def main():
     # QUESTION 2
     all_income = make_income_datasets(path)
     race_filters = make_race_filters(all_income)
-    filter_all_income(all_income)
-    average_incomes, average_prices = make_average_price_incomes(race_filters,
+    filter_all_income(all_income, race_filters)
+    average_incomes, average_prices = make_average_prices_incomes(race_filters,
                                       all_income, clean_home_df)
     plot_average_incomes_prices(average_incomes, average_prices)
 
     # QUESTION 3
-    pops_shapes, price_by_county = prep_q3_populations(populations_df)
-
-
+    pops_shapes, price_by_county = prep_q3_populations(populations_df, clean_home_df)
 
 
 def make_clean_housing_data(home_df: pd.DataFrame) -> pd.DataFrame:
@@ -56,6 +54,8 @@ def make_clean_housing_data(home_df: pd.DataFrame) -> pd.DataFrame:
     '''
     # FILTER OUT irrelevant beds and baths, with less likely scam prices
     is_not_missing = (home_df['beds'].notna()) & (home_df['baths'].notna())
+    # apply it early on to avoid errors
+    home_df = home_df[is_not_missing]
     is_not_too_cheap = home_df['price'] > 700
     # filter out hotel/motel data
     not_motel_hotel = ~(home_df['title'].str.lower().str.contains('.*night.*', regex=True) | 
@@ -65,18 +65,17 @@ def make_clean_housing_data(home_df: pd.DataFrame) -> pd.DataFrame:
     counties = ['san francisco', 'santa clara', 'san mateo', 'alameda',
                 'contra costa', 'sonoma']
 
-    is_counties = clean_home_df['county'].isin(counties)
-    not_expensive = clean_home_df['price'] < 12000
-    beds_within_range = (clean_home_df['beds'] <= 4) & (clean_home_df['beds'] > 0)
-    baths_within_range = (clean_home_df['baths'] <= 2)
+    is_counties = home_df['county'].isin(counties)
+    not_expensive = home_df['price'] < 12000
+    home_df = home_df.astype({'beds': 'int64'})
+    beds_within_range = (home_df['beds'] <= 4) & (home_df['beds'] > 0)
+    baths_within_range = (home_df['baths'] <= 2)
 
     # APPLY MASKS and turn into integer
-    clean_home_df = home_df[is_not_missing & is_not_too_cheap 
+    clean_home_df = home_df[is_not_too_cheap 
                             & not_motel_hotel & beds_within_range
                             & baths_within_range & is_counties
                             & not_expensive]
-
-    clean_home_df = clean_home_df.astype({'beds': 'int64'})
 
     return clean_home_df
 
@@ -84,7 +83,7 @@ def make_clean_housing_data(home_df: pd.DataFrame) -> pd.DataFrame:
 # NOTE: Question 1: How have prices of apartments changed over time based on their types?
 # THIS SHOWS DATA FOR ALL COUNTIES, grouped by the bed/bath information.
 # Create Line Plots for relationship between Apartment Pricing and Apartment Types
-def plot_price_trends(home_data: pd.DataFrame) -> None:
+def plot_price_trends(clean_home_df: pd.DataFrame) -> None:
     """
     This function takes in a dataframe representing housing data
     for northern California off craigslist from approximately 2000 to
@@ -99,7 +98,7 @@ def plot_price_trends(home_data: pd.DataFrame) -> None:
 
 
 # NOTE: Question 1 pt.2, simplifying to how have overall price per beds changed over time
-def plot_bed_to_price(home_data: pd.DataFrame) -> None:
+def plot_bed_to_price(clean_home_df: pd.DataFrame) -> None:
     """
     his function takes in a dataframe representing housing data
     for northern California off craigslist from approximately 2000 to
@@ -136,10 +135,11 @@ def make_income_datasets(path: str) -> pd.DataFrame:
     income_datasets = [] # build this up
 
     for filename in os.listdir(path):
+        print(filename)
         # get file name without csv extension
         file_tokens = filename[0:filename.find('.csv')]
         year = file_tokens[-4:] # gets year
-        dataset = pd.read_csv(os.path.join(path, filename))
+        dataset = pd.read_csv(path + '/' + filename)
         dataset['Year'] = year # adds year column
 
         # make column names shorter and more readable
@@ -153,7 +153,7 @@ def make_income_datasets(path: str) -> pd.DataFrame:
 
     # merge the list of datasets
     for dataset in income_datasets[1:]:
-        all_income = all_income.merge(dataset, how='outer', on=[
+        all_income = all_income.merge(dataset, how='inner', on=[
         'Label (Grouping)', 'Alameda County, Median income',
         'Contra Costa County, Median income',
         'San Francisco County, Median income',
@@ -181,11 +181,11 @@ def make_race_filters(all_income: pd.DataFrame) -> list[pd.Series]:
     black_filter = all_income['Race'].str.contains("Black or African American")
     native_filter = all_income['Race'].str.contains("American Indian and Alaska Native")
     asian_filter = all_income['Race'].str.contains("Asian")
-    masks_list = [white_filter, black_filter, native_filter, asian_filter]
-    return masks_list
+    race_filters = [white_filter, black_filter, native_filter, asian_filter]
+    return race_filters
 
 
-def filter_all_income(all_income: pd.DataFrame) -> None:
+def filter_all_income(all_income: pd.DataFrame, race_filters: list[pd.Series]) -> None:
     """
     Filter out all incomes
     """
@@ -208,13 +208,14 @@ def filter_all_income(all_income: pd.DataFrame) -> None:
         all_income[col] = all_income[col].astype('int32')
 
     # Filters down the data from all income information to only that which we can use
-    all_income = all_income[white_filter | black_filter | native_filter | asian_filter]
+    all_income = all_income[race_filters[0] | race_filters[1] | race_filters[2] | race_filters[3]]
 
 
 # NOTE: Still Q2. MAKE AVERAGES NOW. USE PLOTLY
-def make_average_prices_incomes(masks_list: list[pd.Series],
+def make_average_prices_incomes(race_filters: list[pd.Series],
                                all_income: pd.DataFrame,
-                               clean_home_df: pd.DataFrame) -> :
+                               clean_home_df: pd.DataFrame) -> \
+                               tuple[pd.DataFrame, pd.DataFrame]:
     """
     This ...
     """
@@ -223,7 +224,7 @@ def make_average_prices_incomes(masks_list: list[pd.Series],
 
     # put average income dataframes in a list
     for i in range(0, len(races_list)):
-        race_income = all_income[masks_list[i]].sort_values('Year', 
+        race_income = all_income[race_filters[i]].sort_values('Year', 
                                                             ascending=True)
         race = races_list[i]
         # add 'Average' column, then filter down to just Year and Average.
@@ -263,8 +264,8 @@ def plot_average_incomes_prices(average_incomes: pd.DataFrame,
 # shp file needs all the other files in the folder
 
 # NEW FUNCTION FOR POPULATIONS
-def prep_q3_populations(populations_df: pd.DataFrame) -> 
-                       (pd.DataFrame, pd.DataFrame):
+def prep_q3_populations(populations_df: pd.DataFrame, 
+                        clean_home_df: pd.DataFrame) -> tuple[pd.DataFrame]:
     """
     This prepares population data to shade in the geographical plot,
     and the average housing prices by county.
