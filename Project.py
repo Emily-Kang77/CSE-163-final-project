@@ -38,10 +38,8 @@ def main():
     
     # QUESTION 2
     all_income = make_income_datasets(path)
-    race_filters = make_race_filters(all_income)
-    filter_all_income(all_income, race_filters)
-    av_incomes, av_prices = make_average_prices_incomes(race_filters,
-                                                        all_income,
+    all_income = filter_all_income(all_income)
+    av_incomes, av_prices = make_average_prices_incomes(all_income,
                                                         clean_home_df)
     plot_average_incomes_prices(av_incomes, av_prices)
 
@@ -95,8 +93,10 @@ def plot_price_trends(clean_home_df: pd.DataFrame) -> None:
     2020 and plots a series of graphs representing how prices have
     changed based on bed and bath amounts
     """
-    plots = sns.relplot(data=clean_home_df, x='year', y='price', col='beds', row='baths', kind='line')
-    plots.fig.suptitle('Prices over time for 1-4 beds for 1 bath, 1.5 baths, 2 baths.', size='xx-large')
+    plots = sns.relplot(data=clean_home_df, x='year', y='price', col='beds',
+                        row='baths', kind='line')
+    plots.fig.suptitle('Prices over time for 1-4 beds for 1, 1.5, 2 baths.',
+                       size='xx-large')
     plots.fig.subplots_adjust(top=0.85)
     plots.set_axis_labels('Year (2000-2018)', 'Prices (USD)')
     plt.savefig('price_trends_apartment_type.png')
@@ -140,7 +140,6 @@ def make_income_datasets(path: str) -> pd.DataFrame:
     income_datasets = [] # build this up
 
     for filename in os.listdir(path):
-        print(filename)
         # get file name without csv extension
         file_tokens = filename[0:filename.find('.csv')]
         year = file_tokens[-4:] # gets year
@@ -155,17 +154,14 @@ def make_income_datasets(path: str) -> pd.DataFrame:
         income_datasets.append(dataset)
 
     all_income = income_datasets[0]
-
+    # all_income = None
+    print(all_income.columns)
     # merge the list of datasets
     for dataset in income_datasets[1:]:
-        all_income = all_income.merge(dataset, how='inner', on=[
-        'Label (Grouping)', 'Alameda County, Median income',
-        'Contra Costa County, Median income',
-        'San Francisco County, Median income',
-        'San Mateo County, Median income', 'Santa Clara County, Median income',
-        'Sonoma County, Median income', 'Year'], suffixes=('', '_y'))
-    all_income.drop(all_income.filter(regex='_y$').columns, axis=1, inplace=True)
-    all_income.head(10)
+        all_income = pd.concat([all_income, dataset], join='inner', axis=0)
+        print(all_income.columns)
+
+    # all_income.head(10)
 
     all_income = all_income.loc[:, all_income.columns.str.contains('Median') | 
                                     all_income.columns.str.contains('Group') | 
@@ -189,7 +185,7 @@ def make_race_filters(all_income: pd.DataFrame) -> list[pd.Series]:
     return race_filters
 
 
-def filter_all_income(all_income: pd.DataFrame, race_filters: list[pd.Series]) -> None:
+def filter_all_income(all_income: pd.DataFrame) -> pd.DataFrame:
     """
     Filter out all incomes
     """
@@ -211,13 +207,10 @@ def filter_all_income(all_income: pd.DataFrame, race_filters: list[pd.Series]) -
     for col in cols_medians:
         all_income[col] = all_income[col].astype('int32')
 
-    # Filters down the data from all income information to only that which we can use
-    all_income = all_income[race_filters[0] | race_filters[1] | race_filters[2] | race_filters[3]]
-
+    return all_income
 
 # NOTE: Still Q2. MAKE AVERAGES NOW. USE PLOTLY
-def make_average_prices_incomes(race_filters: list[pd.Series],
-                               all_income: pd.DataFrame,
+def make_average_prices_incomes(all_income: pd.DataFrame,
                                clean_home_df: pd.DataFrame) -> \
                                tuple[pd.DataFrame, pd.DataFrame]:
     """
@@ -225,17 +218,20 @@ def make_average_prices_incomes(race_filters: list[pd.Series],
     """
     races_list = ['White', 'Black', 'Native', 'Asian']
     list_df_incomes = []
+    race_filters = make_race_filters(all_income)
 
     # put average income dataframes in a list
+    
     for i in range(0, len(races_list)):
         race_income = all_income[race_filters[i]].sort_values('Year', 
-                                                            ascending=True)
+                                                              ascending=True)
+        print(race_income)
         race = races_list[i]
         # add 'Average' column, then filter down to just Year and Average.
-        race_income[race + ' Average'] = race_income.mean(axis=1)
+        race_income[race + ' Average'] = race_income.iloc[:, 1:7].mean(axis=1)
         race_income = race_income.loc[:, ['Year', race + ' Average']]
-        list_df_incomes.append(race_income) # add this df to list
-
+        list_df_incomes.append(race_income)  # add this df to list
+    
     # make ONE dataset of average incomes by merging all of them.
     average_incomes = list_df_incomes[0]
     for i in range(1, len(list_df_incomes)):
@@ -246,9 +242,14 @@ def make_average_prices_incomes(race_filters: list[pd.Series],
     # MAKE NEW DF FOR MONTHLY AVERAGE HOUSING PRICES X12
     average_prices = clean_home_df.groupby('year')['price'].mean()
     average_prices = average_prices * 12
+
+    # make dataset of average incomes by merging onto one of them. Then rename.
+    average_incomes = list_df_incomes[0]
+    for i in range(1, len(list_df_incomes)):
+        average_incomes = average_incomes.merge(list_df_incomes[i], left_on='Year', right_on='Year')
+
     # Remove years that don't match with income
     average_prices = average_prices[average_prices.index >= 2010]
-
     return average_incomes, average_prices
 
 
@@ -322,8 +323,8 @@ def plot_populations_prices(price_by_county: pd.DataFrame,
     of each county.
     """
     fig = px.bar(price_by_county, x='county', y='price', labels={
-        'county':'County',
-        'price':'Average Housing Price for 1-4 Bedrooms'
+        'county': 'County',
+        'price': 'Average Housing Price for 1-4 Bedrooms'
     }, title='Average Housing Prices for 1-4 bedrooms by county, 2018')
     fig.show()
 
