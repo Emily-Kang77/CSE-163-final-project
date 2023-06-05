@@ -62,9 +62,14 @@ def main():
                                                        counties_shapes)
     plot_populations_prices(price_by_county, pops_shapes)
 
-    # TEST FUNCTIONS HERE
+    # TEST FUNCTIONS HERE. Continues in Excel in ./Excel testing/
     test_Q1(clean_home_df, price_per_bed_df)
     test_Q2(clean_home_df, av_prices, all_income, av_incomes)
+    # price_per_bed_df.to_csv('./Export/Q2_price_per_bed.csv')
+    # av_prices.to_csv('./Export/Q2_av_price.csv')
+    # av_incomes.to_csv('./Export/Q2_av_incomes.csv')
+    # all_income.to_csv('./Export/all_incomes.csv')
+    # clean_home_df.to_csv('./Export/clean_home.csv')
 
 
 def test_Q1(clean_home_df: pd.DataFrame, price_per_bed_df: pd.DataFrame) \
