@@ -5,6 +5,7 @@ Ryan, Sophie, Emily
 
 - all data except for apartment data is already given here. Download apt data from Kaggle: [link](https://www.kaggle.com/datasets/michaelbryantds/bay-area-craigslist-rentals?resource=download)
 - libraries used: plotly, matplotlib, pandas, geopandas, seaborn
+- Note: please keep this directory hierarchy. The file paths are relative. Put the clean_2000_2018.csv into the root directory at the same level as Project.py.
 
 1. Clone this github repo
 2. Install Python if you don't have it: select the "add to PATH" box
