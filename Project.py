@@ -16,6 +16,8 @@ alongside the average housing prices of the counties.
 Finally, for 2018, it plots the populations of the counties onto
 4 geographical maps by race, and compares it to a bar chart of
 average housing prices by county.
+
+It tests the calculations of question 1 and 2 at the end.
 """
 
 import pandas as pd
@@ -70,8 +72,8 @@ def test_Q1(clean_home_df: pd.DataFrame, price_per_bed_df: pd.DataFrame) \
     """
     Parameters:
     - clean_home_df, a DataFrame of 2000-2018 apartments.
-    - price_per_bed_df, a . . .
-    Behavior: This tests if the averaging isdone properly...
+    - price_per_bed_df, a DataFrame with price / bed ratios from 2000-2018.
+    Behavior: This tests if the ratio is calculated properly.
     """
     # the indices are unordered, so loc with the first 5 rows doesn't work.
     # this just gets the price and bed. ppb = price per bed
@@ -89,6 +91,7 @@ def test_Q1(clean_home_df: pd.DataFrame, price_per_bed_df: pd.DataFrame) \
     test_ratio_series = df_test_ppb['price'] / df_test_ppb['beds']
     print(test_ratio_series.compare(price_per_bed_df.iloc[0:5]['price/beds'],
                                     result_names=('test', 'original')))
+    print()
 
 
 def test_Q2(clean_home_df: pd.DataFrame, average_prices: pd.DataFrame,
@@ -96,10 +99,13 @@ def test_Q2(clean_home_df: pd.DataFrame, average_prices: pd.DataFrame,
             -> None:
     """
     Parameters:
-    - clean_home_df, a DataFrame of 2000-2018 apartments.
-    -
-    -
-    -
+    - clean_home_df, a DataFrame of 2000-2018 homes.
+    - average_prices, a DataFrame of average prices of a small subset
+      of homes across all counties from 2010-2018.
+    - all_income, a DataFrame of incomes from 2010-2018 for four races.
+    - average_incomes, a DataFrame of AVERAGE incomes from 2010-2018
+      for four races.
+
     Behavior: This tests if the mean of the prices and incomes are
     calculated as expected.
     """
@@ -112,31 +118,29 @@ def test_Q2(clean_home_df: pd.DataFrame, average_prices: pd.DataFrame,
     orig_price_2018 = average_prices.iloc[-1]
     print('test: ' + str(test_price_2018))
     print('orig: ' + str(orig_price_2018))
-    # print('orig: ' + type(orig_price_2018))
     assert test_price_2018 == orig_price_2018
 
-    """
     # Check average income of all counties for one race.
+    print()
     print('Check if test average income == original average income')
     is_native_american = all_income['Race'].str.contains('American Indian')
     is_2018 = all_income['Year'] == 2018
     df_test_av_i = all_income[is_native_american & is_2018]
-    assert df_test_av_i.iloc[1:7].mean(axis=1) == average_incomes[average_incomes['']]
-    """
-
-def test_Q3():
-    """
-
-    """
+    # each row has a year average, from 2010-2018
+    test_av_i: pd.Series = df_test_av_i.iloc[1:7].mean(axis=1)
+    print(test_av_i)
+    # didn't know how to get the col to become a series to compare with
+    # assertion
+    print(average_incomes)
 
 
 def make_clean_housing_data(home_df: pd.DataFrame) -> pd.DataFrame:
-    '''
+    """
     Parameter: home_df, a 40 mb DataFrame with Craigslist apartment data
     from 2000-2018.
     Behavior: This function cleans the home dataset from Craigslist
     so it has less scams, hotels, and motels.
-    '''
+    """
     # FILTER OUT irrelevant beds and baths, with less likely scam prices
     is_not_missing = (home_df['beds'].notna()) & (home_df['baths'].notna())
     # apply it early on to avoid errors
@@ -194,10 +198,11 @@ def plot_bed_to_price(clean_home_df: pd.DataFrame) -> pd.Series:
     """
     For QUESTION 1 p2: how have overall price per beds changed over time?
 
-    This function takes in a dataframe representing housing data
-    for northern California off craigslist from approximately 2000 to
-    2020 and plots a graph and plots price change over time based on a ratio
-    that averages price to bed amounts
+    Parameter: clean_home_df, a DataFrame representing housing data
+    for northern California off Craigslist from approximately 2000 to
+    2018.
+    Behavior: it plots a graph and plots price change over time based
+    on a ratio of price / bed.
     """
     # Focuses the year range of our dataset
     data_y2k = clean_home_df['year'] >= 2000
@@ -342,10 +347,13 @@ def make_average_prices_incomes(all_income: pd.DataFrame,
 
     # put average income dataframes in a list
     for i in range(0, len(races_list)):
+        # race_income only has rows with a certain race with the 6 county
+        # medians.
         race_income = all_income[race_filters[i]].sort_values('Year',
                                                               ascending=True)
         race = races_list[i]
         # add '<race> + Average' column, then filter to just that new col.
+        # each row has a year average, from 2010-2018
         race_income[race + ' Average'] = race_income.iloc[:, 1:7].mean(axis=1)
         race_income = race_income.loc[:, ['Year', race + ' Average']]
         list_df_incomes.append(race_income)  # add this df to list
@@ -418,7 +426,7 @@ def prep_q3_populations(populations_df: pd.DataFrame,
     income based on location?
 
     Parameters:
-    - populations_df, a DataFrame of 2018 populations with many demographics.
+    - populations_df, a DataFrame of 2020 populations with many demographics.
     - clean_home_df, a DataFrame of 2000-2018 apartments.
     - counties_shapes, a DataFrame with the shapes of counties boundaries.
 
@@ -510,7 +518,7 @@ def plot_populations_prices(price_by_county: pd.DataFrame,
     ax4.set_title('Asian Population')
     ax4.set_facecolor('lightgray')
 
-    fig.suptitle('2018 Populations of  San Francisco, Santa Clara,' +
+    fig.suptitle('2020 Populations of  San Francisco, Santa Clara,' +
                  'San Mateo, Alameda, Contra Costa, and Sonoma by Race',
                  fontsize=35)
     plt.savefig('Q3_populations_prices.png')
