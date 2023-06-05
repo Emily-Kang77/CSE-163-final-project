@@ -9,8 +9,8 @@ San Francisco, Santa Clara, San Mateo, Alameda, Contra Costa, and Sonoma.
 This plots housing prices for combinations of beds and bathrooms,
 as well as the average price change over time for 1-4 bed and 0-2 bath
 homes.
-# TODO: is this correct?
-Then for 2018, it plots the average incomes of the counties for 4 races
+
+Then for 2018, it plots the average incomes of all the counties for 4 races
 alongside the average housing prices of the counties.
 
 Finally, for 2018, it plots the populations of the counties onto
@@ -30,7 +30,7 @@ plt.rcParams['legend.fontsize'] = 30
 
 def main():
     # reads in primary data file: displaying apartment data
-    # from craigslist 2000-2018
+    # from craigslist 1990ish-2018
     home_df = pd.read_csv('clean_2000_2018.csv', low_memory=False)
 
     # reads in new data files representing income information from 2010-2018
@@ -60,32 +60,74 @@ def main():
                                                        counties_shapes)
     plot_populations_prices(price_by_county, pops_shapes)
 
-    # TODO: TEST FUNCTIONS HERE
+    # TEST FUNCTIONS HERE
     test_Q1(clean_home_df, price_per_bed_df)
+    test_Q2(clean_home_df, av_prices, all_income, av_incomes)
 
 
 def test_Q1(clean_home_df: pd.DataFrame, price_per_bed_df: pd.DataFrame) \
             -> None:
-    # Test 1 for Question 1: Price per bed ratio from 2010-2018
-    # price_per_bed_data['price/beds'] = price_per_bed_data['price'] /
-    # price_per_bed_data['beds']
-    # so look at one column ratio and compare with what I see in the DF
-
+    """
+    Parameters:
+    - clean_home_df, a DataFrame of 2000-2018 apartments.
+    - price_per_bed_df, a . . .
+    Behavior: This tests if the averaging isdone properly...
+    """
     # the indices are unordered, so loc with the first 5 rows doesn't work.
-    # this just gets the price and bed.
-    df_test_ppb = clean_home_df[clean_home_df['year'] == 2000].iloc[:5, 6:8]
-
+    # this just gets the price and bed. ppb = price per bed
+    df_test_ppb = clean_home_df[clean_home_df['year'] >= 2000].iloc[0:5, 6:8]
+    print('print the test ppb just in case: ')
+    print(df_test_ppb)
+    print()
     test_ratio_1 = df_test_ppb.iloc[0]['price'] / df_test_ppb.iloc[0]['beds']
     orig_ratio_1 = price_per_bed_df.iloc[0]['price/beds']
     print('Comparing price/bed ratio of test vs original: ' +
           str(test_ratio_1) + ' vs ' + str(orig_ratio_1))
 
-    print('Comparing small test divison of series with original:')
-    print(df_test_ppb['price'] / df_test_ppb['beds'])
+    print("Comparing small test divison of series with original. \n" +
+          "Empty means they're the same")
     test_ratio_series = df_test_ppb['price'] / df_test_ppb['beds']
-    print(price_per_bed_df.iloc[0:5]['price/beds'])
     print(test_ratio_series.compare(price_per_bed_df.iloc[0:5]['price/beds'],
-                                    keep_equal=True))
+                                    result_names=('test', 'original')))
+
+
+def test_Q2(clean_home_df: pd.DataFrame, average_prices: pd.DataFrame,
+            all_income: pd.DataFrame, average_incomes: pd.DataFrame) \
+            -> None:
+    """
+    Parameters:
+    - clean_home_df, a DataFrame of 2000-2018 apartments.
+    -
+    -
+    -
+    Behavior: This tests if the mean of the prices and incomes are
+    calculated as expected.
+    """
+    # Check the average price.
+    print('Assert if my test 2018 average price == original. No output and' +
+          ' program continuation means the assertion is true.')
+    df_test_av_p = clean_home_df[clean_home_df['year'] == 2018]
+    test_price_2018 = df_test_av_p['price'].sum() / len(df_test_av_p) * 12
+    # year is index. the only column is the price
+    orig_price_2018 = average_prices.iloc[-1]
+    print('test: ' + str(test_price_2018))
+    print('orig: ' + str(orig_price_2018))
+    # print('orig: ' + type(orig_price_2018))
+    assert test_price_2018 == orig_price_2018
+
+    """
+    # Check average income of all counties for one race.
+    print('Check if test average income == original average income')
+    is_native_american = all_income['Race'].str.contains('American Indian')
+    is_2018 = all_income['Year'] == 2018
+    df_test_av_i = all_income[is_native_american & is_2018]
+    assert df_test_av_i.iloc[1:7].mean(axis=1) == average_incomes[average_incomes['']]
+    """
+
+def test_Q3():
+    """
+
+    """
 
 
 def make_clean_housing_data(home_df: pd.DataFrame) -> pd.DataFrame:
@@ -152,7 +194,7 @@ def plot_bed_to_price(clean_home_df: pd.DataFrame) -> pd.Series:
     """
     For QUESTION 1 p2: how have overall price per beds changed over time?
 
-    his function takes in a dataframe representing housing data
+    This function takes in a dataframe representing housing data
     for northern California off craigslist from approximately 2000 to
     2020 and plots a graph and plots price change over time based on a ratio
     that averages price to bed amounts
@@ -190,6 +232,7 @@ def make_income_datasets(path: str) -> pd.DataFrame:
     Parameter: path, a string representing a path to
     a directory of files representing income information from
     2010-2018 for different races and locations in California.
+
     Behavior / return: It returns a DataFrame merges all these
     data into one big dataframe.
     """
@@ -241,7 +284,7 @@ def make_race_filters(all_income: pd.DataFrame) -> list[pd.Series]:
     # excluded one letter to fit flake8 and still filters properly
     black_filter = all_income['Race'].str.contains("Black or African America")
     # the original data used "American Indian" instead of "Native American"
-    native_filter = all_income['Race'].str.contains("American Indian and" +
+    native_filter = all_income['Race'].str.contains("American Indian and " +
                                                     "Alaska Native")
     asian_filter = all_income['Race'].str.contains("Asian")
     race_filters = [white_filter, black_filter, native_filter, asian_filter]
@@ -298,12 +341,11 @@ def make_average_prices_incomes(all_income: pd.DataFrame,
     race_filters = make_race_filters(all_income)
 
     # put average income dataframes in a list
-
     for i in range(0, len(races_list)):
         race_income = all_income[race_filters[i]].sort_values('Year',
                                                               ascending=True)
         race = races_list[i]
-        # add 'Average' column, then filter down to just Year and Average.
+        # add '<race> + Average' column, then filter to just that new col.
         race_income[race + ' Average'] = race_income.iloc[:, 1:7].mean(axis=1)
         race_income = race_income.loc[:, ['Year', race + ' Average']]
         list_df_incomes.append(race_income)  # add this df to list
@@ -318,14 +360,6 @@ def make_average_prices_incomes(all_income: pd.DataFrame,
     # MAKE NEW DF FOR MONTHLY AVERAGE HOUSING PRICES X12
     average_prices = clean_home_df.groupby('year')['price'].mean()
     average_prices = average_prices * 12
-
-    # make dataset of average incomes by merging onto one of them.
-    # Then rename.
-    average_incomes = list_df_incomes[0]
-    for i in range(1, len(list_df_incomes)):
-        average_incomes = average_incomes.merge(list_df_incomes[i],
-                                                left_on='Year',
-                                                right_on='Year')
 
     # Remove years that don't match with income
     average_prices = average_prices[average_prices.index >= 2010]
@@ -413,10 +447,9 @@ def prep_q3_populations(populations_df: pd.DataFrame,
     populations_df['index'] = populations_df['index'].str.lower().str.strip()
 
     # Filters price dataframe to only use 2018 prices
-    # TODO: WHY IS THIS CALLED AVERAGE_2018_PRICES
     average_2018_prices = clean_home_df[clean_home_df['year'] == 2018]
 
-    # Groups the county prices into a mean and creates a dataframe with
+    # Groups the 2018 county prices into a mean and creates a dataframe with
     # their county and average price
     price_by_county = average_2018_prices.groupby('county')['price'].mean()
     price_by_county = price_by_county.to_frame()
