@@ -32,7 +32,7 @@ plt.rcParams['legend.fontsize'] = 30
 
 def main():
     # reads in primary data file: displaying apartment data
-    # from craigslist 1990ish-2018
+    # from craigslist 2000-2018
     home_df = pd.read_csv('clean_2000_2018.csv', low_memory=False)
 
     # reads in new data files representing income information from 2010-2018
@@ -70,6 +70,7 @@ def main():
     # av_incomes.to_csv('./Export/Q2_av_incomes.csv')
     # all_income.to_csv('./Export/all_incomes.csv')
     # clean_home_df.to_csv('./Export/clean_home.csv')
+    # price_by_county.to_csv('./Export/price_by_county.csv')
 
 
 def test_Q1(clean_home_df: pd.DataFrame, price_per_bed_df: pd.DataFrame) \
@@ -111,7 +112,7 @@ def test_Q2(clean_home_df: pd.DataFrame, average_prices: pd.DataFrame,
     - average_incomes, a DataFrame of AVERAGE incomes from 2010-2018
       for four races.
 
-    Behavior: This tests if the mean of the prices and incomes are
+    Behavior: This tests if the averages of the prices and incomes are
     calculated as expected.
     """
     # Check the average price.
@@ -141,7 +142,7 @@ def test_Q2(clean_home_df: pd.DataFrame, average_prices: pd.DataFrame,
 
 def make_clean_housing_data(home_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Parameter: home_df, a 40 mb DataFrame with Craigslist apartment data
+    Parameter: home_df, a DataFrame with Craigslist apartment data
     from 2000-2018.
     Behavior: This function cleans the home dataset from Craigslist
     so it has less scams, hotels, and motels.
@@ -184,9 +185,10 @@ def plot_price_trends(clean_home_df: pd.DataFrame) -> None:
     For QUESTION 1: How have prices of apartments changed over time
     based on their types?
 
-    Parameter: clean_home_df. DataFrame of Craigslist apt data
+    Parameter: clean_home_df, a DataFrame of Craigslist apt data
     but with less entries that are suspiciously cheap or for
     hotels and motels. Goes from 2000-2018.
+
     Behavior: Makes 12 sub-plots representing how prices have
     changed based on bed and bath amounts.
     """
@@ -206,8 +208,8 @@ def plot_bed_to_price(clean_home_df: pd.DataFrame) -> pd.Series:
     Parameter: clean_home_df, a DataFrame representing housing data
     for northern California off Craigslist from approximately 2000 to
     2018.
-    Behavior: it plots a graph and plots price change over time based
-    on a ratio of price / bed.
+    Behavior / return: it plots a graph and plots price change over time
+    based on a ratio of price / bed. It returns a Series of this ratio.
     """
     # Focuses the year range of our dataset
     data_y2k = clean_home_df['year'] >= 2000
@@ -243,8 +245,8 @@ def make_income_datasets(path: str) -> pd.DataFrame:
     a directory of files representing income information from
     2010-2018 for different races and locations in California.
 
-    Behavior / return: It returns a DataFrame merges all these
-    data into one big dataframe.
+    Behavior / return: It returns a DataFrame in which all income
+    data are merged.
     """
     income_datasets = []  # build this up
 
@@ -380,7 +382,7 @@ def make_average_prices_incomes(all_income: pd.DataFrame,
 
 
 def plot_average_incomes_prices(average_incomes: pd.DataFrame,
-                                price_avg_2010_2018: pd.DataFrame):
+                                price_avg_2010_2018: pd.DataFrame) -> None:
     """
     For QUESTION 2
 
@@ -435,10 +437,11 @@ def prep_q3_populations(populations_df: pd.DataFrame,
     - clean_home_df, a DataFrame of 2000-2018 apartments.
     - counties_shapes, a DataFrame with the shapes of counties boundaries.
 
-    Behavior: This prepares population data to shade in the geographical plot,
-    and the average housing prices by county. It returns a tuple of
-    2 DataFrames. One is the merged form of the populations and
-    counties_shapes, as well as average prices by county in 2018.
+    Behavior / return: This prepares population data to shade in the
+    geographical plot, and the average housing prices by county. It
+    returns a tuple of 2 DataFrames. One is the merged form of the
+    populations and counties_shapes, as well as average prices by
+    county in 2018.
     """
     # Clarifies data to only relevant counties (those with most information)
     counties = ['San Francisco', 'Santa Clara', 'San Mateo', 'Alameda',
